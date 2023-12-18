@@ -14,6 +14,7 @@ $mb_product = $obj_mb | Select-Object -ExpandProperty Product
 $ram_bank = $obj_ram | Select-Object -ExpandProperty BankLabel
 $ram_size = $obj_ram | Select-Object -ExpandProperty Capacity
 $ram_speed = $obj_ram | Select-Object -ExpandProperty Speed
+$ram_currentspeed = $obj_ram | Select-Object -ExpandProperty ConfiguredClockSpeed
 $ram_maker = $obj_ram | Select-Object -ExpandProperty Manufacturer
 $ram_part = $obj_ram | Select-Object -ExpandProperty PartNumber
 $disk = Get-PhysicalDisk
@@ -29,12 +30,12 @@ $i = 0
 $ram = ""
 if ($ram_bank.GetType().Name -eq "String"){
 	$size = $ram_size / 1GB
-	$ram += "RAM {0}: {1} GB {2} MHz {3} {4}`n" -f $bank, $size, $ram_speed, $ram_maker, $ram_part
+	$ram += "RAM {0}: {1} GB {2} ({3}) MHz {4} {5}`n" -f $bank, $size, $ram_currentspeed, $ram_speed, $ram_maker, $ram_part
 }
 else{
 	foreach ($bank in $ram_bank){
 		$size = $ram_size[$i] / 1GB
-		$ram += "RAM {0}: {1} GB {2} MHz {3} {4}`n" -f $bank, $size, $ram_speed[$i], $ram_maker[$i], $ram_part[$i]
+		$ram += "RAM {0}: {1} GB {2} ({3}) MHz {4} {5}`n" -f $bank, $size, $ram_currentspeed[$i], $ram_speed[$i], $ram_maker[$i], $ram_part[$i]
 		$i++
 	}
 }
