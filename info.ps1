@@ -42,6 +42,7 @@ else{
 $i = 0
 $disk = ""
 if ($disk_name.GetType().Name -eq "String"){
+	[int]$size = $disk_size / 1GB
 	$disk += "{0} {1} GB {2} {3}`n" -f $disk_name, $size, $disk_bustype, $disk_mediatype
 }
 else{
