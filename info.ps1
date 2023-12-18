@@ -27,18 +27,29 @@ $mb = "MB: {0} {1}" -f $mb_maker, $mb_product
 $gpu = "GPU: {0} ({1} GB) @ {2}x{3}@{4} Hz`n" -f $gpu_name, $gpu_vram, $gpu_horizontal, $gpu_vertical, $gpu_refresh
 $i = 0
 $ram = ""
-foreach ($bank in $ram_bank){
-	$size = $ram_size[$i] / 1GB
-	$ram += "RAM {0}: {1} GB {2} MHz {3} {4}`n" -f $bank, $size, $ram_speed[$i], $ram_maker[$i], $ram_part[$i]
-	$i++
+if ($ram_bank.GetType().Name -eq "String"){
+	$size = $ram_size / 1GB
+	$ram += "RAM {0}: {1} GB {2} MHz {3} {4}`n" -f $bank, $size, $ram_speed, $ram_maker, $ram_part
+}
+else{
+	foreach ($bank in $ram_bank){
+		$size = $ram_size[$i] / 1GB
+		$ram += "RAM {0}: {1} GB {2} MHz {3} {4}`n" -f $bank, $size, $ram_speed[$i], $ram_maker[$i], $ram_part[$i]
+		$i++
+	}
 }
 
 $i = 0
 $disk = ""
-foreach ($item in $disk_name){
-	[int]$size = $disk_size[$i] / 1GB
-	$disk += "{0} {1} GB {2} {3}`n" -f $disk_name[$i], $size, $disk_bustype[$i], $disk_mediatype[$i]
-	$i++
+if ($disk_name.GetType().Name -eq "String"){
+	$disk += "{0} {1} GB {2} {3}`n" -f $disk_name, $size, $disk_bustype, $disk_mediatype
+}
+else{
+	foreach ($item in $disk_name){
+		[int]$size = $disk_size[$i] / 1GB
+		$disk += "{0} {1} GB {2} {3}`n" -f $disk_name[$i], $size, $disk_bustype[$i], $disk_mediatype[$i]
+		$i++
+	}
 }
 
 Write-Host $cpu
