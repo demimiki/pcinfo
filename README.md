@@ -1,6 +1,6 @@
-PCInfo
+<h1>PCInfo</h1>
 
-This script detects your CPU, GPU, RAM and disks in your system.
+This script detects your CPU, GPU, RAM and disks in your system. (Windows only!)
 
 Simply run this command in your powershell or terminal (no admin rights needed):
 
