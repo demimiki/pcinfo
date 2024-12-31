@@ -1,3 +1,7 @@
+###Changelog###
+#
+# Rewritten GPU detection for multi-GPU systems
+
 Write-Host "Collecting info...`n`n"
 
 $obj_cpu = Get-CimInstance -Class Win32_Processor
@@ -12,9 +16,32 @@ $cpu_name = $obj_cpu | Select-Object -ExpandProperty Name
 $cpu_socket = $obj_cpu | Select-Object -ExpandProperty SocketDesignation
 
 ###GPU###
-$gpu_name = $obj_gpu | Select-Object -ExpandProperty Name
-# The AdapterRAM field is broken, so we read it from registry
-$gpu_vram = ((Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -Name HardwareInformation.qwMemorySize -ErrorAction SilentlyContinue)."HardwareInformation.qwMemorySize")/1GB
+# The AdapterRAM field is broken (reading DWORD with 4GB limit, instead of QWORD), so we read it from registry
+$gpu_name = ""
+$gpu_vram = ""
+$gpu_output = $obj_gpu | Select-Object -ExpandProperty Name
+if ($gpu_output.GetType().BaseType.Name -eq "Array"){
+	$i = 0
+	foreach ($item in $gpu_output){
+		$gpu_name += (Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\000$i" -Name HardwareInformation.AdapterString -ErrorAction SilentlyContinue)."HardwareInformation.AdapterString" + ", "
+		$i++
+	}
+	$gpu_name = $gpu_name.SubString(0,$gpu_name.Length-2)
+	
+	$gpu_vrams = (Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0*" -Name HardwareInformation.qwMemorySize -ErrorAction SilentlyContinue)."HardwareInformation.qwMemorySize"
+	foreach ($item in $gpu_vrams){
+		$item /= 1GB
+		$item = $item | Out-String
+		$item = $item.SubString(0,$item.Length-2)
+		$gpu_vram += $item + " GB, "
+	}
+	$gpu_vram = $gpu_vram.SubString(0,$gpu_vram.Length-2)
+}
+else{
+	$gpu_name = $gpu_output
+	$gpu_vram = (((Get-ItemProperty -Path "HKLM:\SYSTEM\ControlSet001\Control\Class\{4d36e968-e325-11ce-bfc1-08002be10318}\0000" -Name HardwareInformation.qwMemorySize -ErrorAction SilentlyContinue)."HardwareInformation.qwMemorySize")/1GB | Out-String) + " GB"
+}
+
 $gpu_horizontal = $obj_gpu | Select-Object -ExpandProperty CurrentHorizontalResolution
 $gpu_vertical = $obj_gpu | Select-Object -ExpandProperty CurrentVerticalResolution
 $gpu_refresh = $obj_gpu | Select-Object -ExpandProperty MaxRefreshRate
@@ -32,7 +59,7 @@ while($monitor_raw[$i] -ne $NULL){
 	}
 	$i++
 }
-$monitor_letter_list[$monitor_letter_list.Length-1]=""
+$monitor_letter_list[$monitor_letter_list.Length-1] = ""
 $monitor = "Connected monitor: " + -join $monitor_letter_list
 
 ###MB###
@@ -56,7 +83,7 @@ $disk_size = $obj_disk | Select-Object -ExpandProperty Size
 
 $cpu = "CPU: {0} ({1})" -f $cpu_name.Trim(), $cpu_socket
 $mb = "MB: {0} {1}" -f $mb_maker, $mb_product
-$gpu = "GPU: {0} ({1} GB) @ {2}x{3}@{4} Hz" -f $gpu_name, $gpu_vram, $gpu_horizontal, $gpu_vertical, $gpu_refresh
+$gpu = "GPU: {0} ({1}) @ {2}x{3}@{4} Hz" -f $gpu_name, $gpu_vram, $gpu_horizontal, $gpu_vertical, $gpu_refresh
 $i = 0
 $ram = "`n"
 if ($ram_bank.GetType().Name -eq "String"){
