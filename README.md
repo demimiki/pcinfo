@@ -11,7 +11,7 @@ Invoke-Expression $(Invoke-RestMethod https://raw.githubusercontent.com/demimiki
 <br>
 Example 1:</br>
 </br>
-Collecting info...</br>
+<i>Collecting info...</br>
 </br>
 </br>
 CPU: AMD Ryzen 5 5600X 6-Core Processor (AM4)</br>
