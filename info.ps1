@@ -1,6 +1,6 @@
 ###Changelog###
 #
-# Rewritten GPU detection for multi-GPU systems
+# For the disks it now shows the drive letter(s) too
 
 Write-Host "Collecting info...`n`n"
 
@@ -9,7 +9,6 @@ $obj_gpu = Get-CimInstance -Class Win32_VideoController
 $obj_monitor = Get-CimInstance -Class WmiMonitorID -Namespace root\wmi
 $obj_mb = Get-CimInstance -Class Win32_BaseBoard
 $obj_ram = Get-CimInstance -Class Win32_PhysicalMemory
-$obj_disk = Get-PhysicalDisk
 
 ###CPU###
 $cpu_name = $obj_cpu | Select-Object -ExpandProperty Name
@@ -17,6 +16,7 @@ $cpu_socket = $obj_cpu | Select-Object -ExpandProperty SocketDesignation
 
 ###GPU###
 # The AdapterRAM field is broken (reading DWORD with 4GB limit, instead of QWORD), so we read it from registry
+# Note: If you get multiple entries of a GPU, that is not in the system, then you have to remove the inactive entry from device manager (show hidden devices)
 $gpu_name = ""
 $gpu_vram = ""
 $gpu_output = $obj_gpu | Select-Object -ExpandProperty Name
@@ -46,7 +46,7 @@ $gpu_horizontal = $obj_gpu | Select-Object -ExpandProperty CurrentHorizontalReso
 $gpu_vertical = $obj_gpu | Select-Object -ExpandProperty CurrentVerticalResolution
 $gpu_refresh = $obj_gpu | Select-Object -ExpandProperty MaxRefreshRate
 
-###MONITOR### (still experimental, needs feedback)
+###MONITOR###
 $monitor_raw = $obj_monitor | Select-Object -ExpandProperty UserFriendlyName
 $monitor_letter_list=@()
 $i=0
@@ -75,10 +75,26 @@ $ram_maker = $obj_ram | Select-Object -ExpandProperty Manufacturer
 $ram_part = $obj_ram | Select-Object -ExpandProperty PartNumber
 
 ###DISK###
-$disk_name = $obj_disk | Select-Object -ExpandProperty FriendlyName
-$disk_bustype = $obj_disk | Select-Object -ExpandProperty BusType
-$disk_mediatype = $obj_disk | Select-Object -ExpandProperty MediaType
-$disk_size = $obj_disk | Select-Object -ExpandProperty Size
+$disk_obj = Get-Disk | ForEach-Object {
+    $disk = $_
+    $physical = Get-PhysicalDisk | Where-Object { $_.DeviceId -eq $disk.Number }
+    $partitions = Get-Partition -DiskNumber $disk.Number
+
+    $driveLetters = $partitions | ForEach-Object {
+        $volume = Get-Volume -Partition $_ -ErrorAction SilentlyContinue
+        if ($volume -and $volume.DriveLetter) {
+            $volume.DriveLetter
+        }
+    }
+    [PSCustomObject]@{
+        Name  = $physical.FriendlyName
+        DriveLetters  = ($driveLetters -join ', ')
+        Size        = '{0:0} GB' -f ($disk.Size / 1GB)
+		Bus       = $physical.BusType
+        Media     = $physical.MediaType
+    }
+}
+
 
 
 $cpu = "CPU: {0} ({1})" -f $cpu_name.Trim(), $cpu_socket
@@ -98,19 +114,14 @@ else{
 	}
 }
 
-$i = 0
 $disk = ""
-if ($disk_name.GetType().Name -eq "String"){
-	[int]$size = $disk_size / 1GB
-	$disk += "{0} {1} GB {2} {3}`n" -f $disk_name, $size, $disk_bustype, $disk_mediatype
+$disk_obj = $disk_obj | Sort-Object{
+	$_.DriveLetters.Split(',')[0].Trim()
 }
-else{
-	foreach ($item in $disk_name){
-		[int]$size = $disk_size[$i] / 1GB
-		$disk += "{0} {1} GB {2} {3}`n" -f $disk_name[$i], $size, $disk_bustype[$i], $disk_mediatype[$i]
-		$i++
-	}
+foreach ($item in $disk_obj){
+	$disk += "{0}:\ {1} {2} {3} {4}`n" -f  $item.DriveLetters, $item.Name, $item.Size, $item.Bus, $item.Media
 }
+
 
 Write-Host $cpu
 Write-Host $mb
